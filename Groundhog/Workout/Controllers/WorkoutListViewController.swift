@@ -34,29 +34,45 @@ class WorkoutListViewController: UITableViewController {
     self.refreshControl = UIRefreshControl()
     self.refreshControl?.addTarget(self, action: "refresh:", forControlEvents: .ValueChanged)
     
+    // This code is pretty much the same as the code you placed in the AppDelegate, but in this case, you refresh the controller's tableView if the user grants access. Also, note that you dispatch to the main thread: HKHealthStore doesn't make any guarantees that it will call completion blocks on the queue that a method was called upon, so you'll need to dispatch UIKit methods to the main thread, as usual. Now you have access to HealthKit for reading and writing.
+    
+    let healthService:HealthDataService = HealthDataService()
+    healthService.authorizeHealthKitAccess { accessGranted, error in
+      dispatch_async(dispatch_get_main_queue(), { () -> Void in
+        if accessGranted {
+          self.refresh(nil)
+        } else {
+          print("HealthKit authorization denied! \n\(error)")
+        }
+      })
+    }
+    
+    
+    
+    
   }
   
   
   // MARK: - Actions
   
   @IBAction func refresh(sender: AnyObject?) {
-    self.refreshControl?.beginRefreshing()
-    self.workoutService.readIntervalWorkouts { (success, workouts, error) -> Void in
-      dispatch_async(dispatch_get_main_queue(), { () -> Void in
-        self.refreshControl?.endRefreshing()
-        self.workouts = workouts
-        self.tableView.reloadData()
-      })
-    }
+      self.refreshControl?.beginRefreshing()
+      self.workoutService.readIntervalWorkouts { (success, workouts, error) -> Void in
+    dispatch_async(dispatch_get_main_queue(), { () -> Void in
+    self.refreshControl?.endRefreshing()
+    self.workouts = workouts
+    self.tableView.reloadData()
+    })
+      }
   }
   
   
   // MARK: - Table view data source
   
   override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    guard let workouts = workouts else {return 0}
-    
-    return workouts.count
+      guard let workouts = workouts else {return 0}
+      
+      return workouts.count
   }
   
   override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
@@ -71,8 +87,8 @@ class WorkoutListViewController: UITableViewController {
   // MARK: - UITableViewDelegate
   
   override func tableView(tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
-    // Hides the empty cell row separators
-    return 0.01
+      // Hides the empty cell row separators
+      return 0.01
   }
   
   override func tableView(tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
@@ -84,9 +100,9 @@ class WorkoutListViewController: UITableViewController {
   // MARK: - Navigation
   
   override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-    let vc = segue.destinationViewController as! WorkoutViewController
-    vc.workoutService = workoutService
-    vc.workout = workouts![self.tableView.indexPathForSelectedRow!.row]
+      let vc = segue.destinationViewController as! WorkoutViewController
+      vc.workoutService = workoutService
+      vc.workout = workouts![self.tableView.indexPathForSelectedRow!.row]
   }
   
 }
